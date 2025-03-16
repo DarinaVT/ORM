@@ -6,42 +6,44 @@ class Program
     public static void Main()
     {
         string dbName = "Shop";
-        string tableCustomers = "Customers";
-        string tableProducts = "Products";
+        //string tableCustomers = "Customers";
+        //string tableProducts = "Products";
 
-        //checks database's existence
-        Database exists = new Database();
+        ////checks database's existence
+        //Database exists = new Database();
 
-        //creates database if it doesn't exist yet
-        if (!exists.DatabaseExistence(dbName))
-        {
-            Database create = new Database();
-            create.CreateDatabase(dbName);
-        }
+        ////creates database if it doesn't exist yet
+        //if (!exists.DatabaseExistence(dbName))
+        //{
+        //    Database create = new Database();
+        //    create.CreateDatabase(dbName);
+        //}
 
-        //creates table for customers
-        Tables customers = new Tables(dbName);
-        customers.CreateTableCustomers(tableCustomers);
+        ////creates table for customers
+        //Tables customers = new Tables(dbName);
+        //customers.CreateTableCustomers(tableCustomers);
 
-        //creates table for products
-        Tables products = new Tables(dbName);
-        products.CreateTableProducts(tableProducts);
+        ////creates table for products
+        //Tables products = new Tables(dbName);
+        //products.CreateTableProducts(tableProducts);
 
-        //adds data to tables
+        //////adds data to tables
         Data data = new Data(dbName);
 
-        data.CustomerData("Customers", "Liam Blackwood");
-        data.CustomerData("Customers", "Seraphina Caldwell");
-        data.CustomerData("Customers", "Dorian Holloway");
-        data.CustomerData("Customers", "Elowen Vance");
-        data.CustomerData("Customers", "Cassius Thorne");
+        //data.CustomerData("Customers", "Liam Blackwood");
+        //data.CustomerData("Customers", "Seraphina Caldwell");
+        //data.CustomerData("Customers", "Dorian Holloway");
+        //data.CustomerData("Customers", "Elowen Vance");
+        //data.CustomerData("Customers", "Cassius Thorne");
 
-        data.ProductsData("Products", "Mechanical Gaming Keyboard", 1);
-        data.ProductsData("Products", "4K Ultrawide Monitor", 2);
-        data.ProductsData("Products", "Noise-Canceling Studio Headphones", 3);
-        data.ProductsData("Products", "Mechanical Gaming Keyboard", 4);
-        data.ProductsData("Products", "Smart LED Desk Lamp", 5);
-        data.ProductsData("Products", "4K Ultrawide Monitor", 3);
+        //data.ProductsData("Products", "Mechanical Gaming Keyboard", 1);
+        //data.ProductsData("Products", "4K Ultrawide Monitor", 2);
+        //data.ProductsData("Products", "Noise-Canceling Studio Headphones", 3);
+        //data.ProductsData("Products", "Mechanical Gaming Keyboard", 4);
+        //data.ProductsData("Products", "Smart LED Desk Lamp", 5);
+        //data.ProductsData("Products", "4K Ultrawide Monitor", 3);
+        data.ProductsData("Products", "", 3);
+        data.ProductsData("Products", "Apple AirPods 3rd gen", 2);
 
         //execute query
         Queries queries = new Queries(dbName);
@@ -182,25 +184,36 @@ class Data
     public void ProductsData(string tableName, string productName, int BuyerID)
     {
         string cmd = $"INSERT INTO {tableName} (ProductName, BuyerID) VALUES (@ProductName, @BuyerID)";
-
+        //rollback when productName is null
         using (SqlConnection sql = new SqlConnection(ConnectionString))
         {
-            try
+            sql.Open();
+            using (SqlTransaction transaction = sql.BeginTransaction())
             {
-                sql.Open();
-                SqlCommand sqlCommand = new SqlCommand(cmd, sql);
-                sqlCommand.Parameters.AddWithValue("@ProductName", productName);
-                sqlCommand.Parameters.AddWithValue("@BuyerID", BuyerID);
-                sqlCommand.ExecuteNonQuery();
-                Console.WriteLine($"Data inserted into {tableName}");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-            }
-            finally
-            {
-                sql.Close();
+                try
+                {
+                    if (string.IsNullOrWhiteSpace(productName))
+                    {
+                        throw new ArgumentException("Product name cannot be null, rolling back transaction");
+                    }
+                    using (SqlCommand sqlCommand = new SqlCommand(cmd, sql, transaction))
+                    {
+                        sqlCommand.Parameters.AddWithValue("@ProductName", productName);
+                        sqlCommand.Parameters.AddWithValue("@BuyerID", BuyerID);
+                        sqlCommand.ExecuteNonQuery();
+                    }
+                    transaction.Commit();
+                    Console.WriteLine($"Data inserted into {tableName}");
+                }
+                catch(Exception ex)
+                {
+                    transaction.Rollback();
+                    Console.WriteLine(ex.Message);
+                }
+                finally
+                {
+                    sql.Close();
+                }
             }
         }
     }
@@ -214,9 +227,7 @@ class Queries
     }
     public void TimesBought()
     {
-        string cmd = "SELECT ProductName, COUNT(*) AS TimesBought " +
-                     "FROM Products GROUP BY ProductName" +
-                     "ORDER BY TimesBought DESC";
+        string cmd = "SELECT ProductName, COUNT(*) AS TimesBought\r\nFROM Products\r\nGROUP BY ProductName\r\nORDER BY TimesBought DESC";
         using (SqlConnection sql = new SqlConnection(ConnectionString))
         {
             try
