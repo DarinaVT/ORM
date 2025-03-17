@@ -6,48 +6,51 @@ class Program
     public static void Main()
     {
         string dbName = "Shop";
-        //string tableCustomers = "Customers";
-        //string tableProducts = "Products";
+        string tableCustomers = "Customers";
+        string tableProducts = "Products";
 
-        ////checks database's existence
-        //Database exists = new Database();
+        //checks database's existence
+        Database exists = new Database();
 
-        ////creates database if it doesn't exist yet
-        //if (!exists.DatabaseExistence(dbName))
-        //{
-        //    Database create = new Database();
-        //    create.CreateDatabase(dbName);
-        //}
+        //creates database if it doesn't exist yet
+        if (!exists.DatabaseExistence(dbName))
+        {
+            Database create = new Database();
+            create.CreateDatabase(dbName);
+        }
 
-        ////creates table for customers
-        //Tables customers = new Tables(dbName);
-        //customers.CreateTableCustomers(tableCustomers);
+        //creates table for customers
+        Tables customers = new Tables(dbName);
+        customers.CreateTableCustomers(tableCustomers);
 
-        ////creates table for products
-        //Tables products = new Tables(dbName);
-        //products.CreateTableProducts(tableProducts);
+        //creates table for products
+        Tables products = new Tables(dbName);
+        products.CreateTableProducts(tableProducts);
 
-        //////adds data to tables
+        //adds data to tables
         Data data = new Data(dbName);
 
-        //data.CustomerData("Customers", "Liam Blackwood");
-        //data.CustomerData("Customers", "Seraphina Caldwell");
-        //data.CustomerData("Customers", "Dorian Holloway");
-        //data.CustomerData("Customers", "Elowen Vance");
-        //data.CustomerData("Customers", "Cassius Thorne");
+        data.CustomerData("Customers", "Liam Blackwood");
+        data.CustomerData("Customers", "Seraphina Caldwell");
+        data.CustomerData("Customers", "Dorian Holloway");
+        data.CustomerData("Customers", "Elowen Vance");
+        data.CustomerData("Customers", "Cassius Thorne");
 
-        //data.ProductsData("Products", "Mechanical Gaming Keyboard", 1);
-        //data.ProductsData("Products", "4K Ultrawide Monitor", 2);
-        //data.ProductsData("Products", "Noise-Canceling Studio Headphones", 3);
-        //data.ProductsData("Products", "Mechanical Gaming Keyboard", 4);
-        //data.ProductsData("Products", "Smart LED Desk Lamp", 5);
-        //data.ProductsData("Products", "4K Ultrawide Monitor", 3);
+        data.ProductsData("Products", "Mechanical Gaming Keyboard", 1);
+        data.ProductsData("Products", "4K Ultrawide Monitor", 2);
+        data.ProductsData("Products", "Noise-Canceling Studio Headphones", 3);
+        data.ProductsData("Products", "Mechanical Gaming Keyboard", 4);
+        data.ProductsData("Products", "Smart LED Desk Lamp", 5);
+        data.ProductsData("Products", "4K Ultrawide Monitor", 3);
         data.ProductsData("Products", "", 3);
         data.ProductsData("Products", "Apple AirPods 3rd gen", 2);
 
         //execute query
         Queries queries = new Queries(dbName);
         queries.TimesBought();
+
+        //delete from customers where ID = 1
+        queries.DeleteRecord(1);
     }
 }
 
@@ -126,8 +129,8 @@ class Tables
                       ID INT PRIMARY KEY IDENTITY(1,1),
                       ProductName VARCHAR(100),
                       BuyerID INT,
-                      FOREIGN KEY (BuyerID) REFERENCES Customers(ID)
-                      )";
+                      FOREIGN KEY (BuyerID) REFERENCES Customers(ID) ON DELETE CASCADE
+                      )"; //fixed so record deleting from main table is possible
 
         using (SqlConnection sql = new SqlConnection(ConnectionString))
         {
@@ -184,7 +187,7 @@ class Data
     public void ProductsData(string tableName, string productName, int BuyerID)
     {
         string cmd = $"INSERT INTO {tableName} (ProductName, BuyerID) VALUES (@ProductName, @BuyerID)";
-        //rollback when productName is null
+
         using (SqlConnection sql = new SqlConnection(ConnectionString))
         {
             sql.Open();
@@ -249,6 +252,28 @@ class Queries
             }
             finally
             {
+                sql.Close();
+            }
+        }
+    }
+    public void DeleteRecord(int recordId)
+    {
+        string cmd = "DELETE FROM Customers WHERE ID = @recordId";
+        using (SqlConnection sql = new SqlConnection(ConnectionString))
+        {
+            try
+            {
+                sql.Open();
+                SqlCommand sqlCommand = new SqlCommand(cmd, sql);
+                sqlCommand.Parameters.AddWithValue("@recordId", recordId);
+                sqlCommand.ExecuteNonQuery();
+                Console.WriteLine($"Customer with ID = {recordId} and records of their purchases have been deleted");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+            finally{
                 sql.Close();
             }
         }
